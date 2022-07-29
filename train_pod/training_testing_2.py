@@ -117,6 +117,7 @@ def training(args, model, train_loader, test_loader, Loss, data_weight ,optimize
             event.wait()
             logging.info("event is set")
 
+            # test
             # Load Model
             logging.info(f"pretrained_path: [{namespace.pretrained_path}]")
             # model = torch.load(namespace.pretrained_path)
