@@ -1,0 +1,8 @@
+{
+    "name": "covid",
+    "round": 500,
+    "edge": 4,
+    "EpR": 1,
+    "timeout": 86400,
+    "pretrainedModel": "master"
+}
