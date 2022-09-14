@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aspect-aggregator-config
+data:
+  aggregator-config.yml: |
+    type: aggregator
+    notification:
+      type: pull
+      pullPeriod: 60
+    logLevel: debug
+    registry:
+      URL: gitea.corp.ailabs.tw
+      protocol: https
+      username: aggregator
+      userToken: 1qaz_WSX
+    aggregatorModelRepoName: gitea/aspect_lab3_global
+    edgeModelRepoNames:
+      - gitea/aspect_edge_repo1
+      - gitea/aspect_edge_repo2
+    trainPlanRepoName: gitea/aspect_lab3_trainplan
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aspect-logserver-config
+data:
+  logserver-config.yml: |
+    logLevel: debug
+    stewardServerURI: "0.0.0.0:9080"
+    gitUserToken: 1qaz_WSX
+    tensorboardDataRootDir: /tensorboard_data
+    modelRepos:
+      - gitHttpURL: https://logserver@gitea.corp.ailabs.tw:443/gitea/aspect_lab3_global
+      - gitHttpURL: https://logserver@gitea.corp.ailabs.tw:443/gitea/aspect_edge_repo1
+      - gitHttpURL: https://logserver@gitea.corp.ailabs.tw:443/gitea/aspect_edge_repo2

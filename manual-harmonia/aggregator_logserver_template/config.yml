@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {PROJECT_NAME}-aggregator-config
+data:
+  aggregator-config.yml: |
+    type: aggregator
+    notification:
+      type: pull
+      pullPeriod: 60
+    logLevel: debug
+    registry:
+      URL: gitea.corp.ailabs.tw
+      protocol: https
+      username: {AGGREGATOR_USERNAME}
+      userToken: {AGGREGATOR_PASSWORD}
+    aggregatorModelRepoName: {GITEA_ADMIN_USERNAME}/{GLOBAL_REPO}
+    edgeModelRepoNames:
+    trainPlanRepoName: {GITEA_ADMIN_USERNAME}/{TRAIN_PLAN_REPO}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {PROJECT_NAME}-logserver-config
+data:
+  logserver-config.yml: |
+    logLevel: debug
+    stewardServerURI: "0.0.0.0:9080"
+    gitUserToken: 1qaz_WSX
+    tensorboardDataRootDir: /tensorboard_data
+    modelRepos:

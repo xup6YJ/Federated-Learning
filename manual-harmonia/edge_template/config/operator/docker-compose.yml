@@ -1,0 +1,36 @@
+version: "2.3"
+services:
+  app:
+    container_name: {APPLICATION_NAME}
+    image: {APPLICATION_IMAGE_NAME}
+    environment:
+      OPERATOR_URI: operator:8787
+      NVIDIA_VISIBLE_DEVICES: 0
+      GRPC_TRACE: call_error,server_channel,http,http1,handshaker
+      GRPC_VERBOSITY: DEBUG
+    runtime: nvidia
+    volumes:
+      - {ROOT_PATH}/repos:/repos
+      - {TRANSFORMED_OUTPUT_PATH}:{TRANSFORMED_OUTPUT_PATH}
+      - {ROOT_PATH}/train_config.yml:/app/train_config.yml
+    ipc: host
+    networks:
+      - fl-network
+  operator:
+    container_name: {OPERATOR_NAME}
+    image: lab4-registry.corp.ailabs.tw/group-medical/harmonia/operator:v0.1.0
+    environment:
+      GRPC_VERBOSITY: DEBUG
+      GRPC_TRACE: call_error,server_channel,http,http1,handshaker
+    volumes:
+      - {ROOT_PATH}/config.yml:/app/config.yml
+      - {ROOT_PATH}/repos:/repos
+    ports:
+      - 9080:9080
+    networks:
+      - fl-network
+
+networks:
+  fl-network:
+    external: false
+    name: fl-network

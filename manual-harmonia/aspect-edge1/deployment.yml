@@ -1,0 +1,106 @@
+# Edge1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspect-edge1
+  labels:
+    app: aspect-edge1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspect-edge1
+  template:
+    metadata:
+      labels:
+        ailabs.tw/group: medical
+        app: aspect-edge1
+    spec:
+      tolerations:
+        - key: ailabs.tw/fl-only
+          operator: Exists
+      priorityClassName: perpetual-batch
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - lab3-g4
+      dnsConfig:
+        options:
+          - name: ndots
+            value: '1'
+      imagePullSecrets:
+        - name: fl-tmi-thor-lab3
+
+      # Remove past repos
+      initContainers:
+      - name: "delete-before"
+        image: "busybox:1.28"
+        volumeMounts:
+        - name: manual-harmonia
+          subPath: edges/aspect-edge1/repos
+          mountPath: /repos
+        command: ['sh', '-c', 'rm -rf /repos/* && echo Files deleted']
+
+      containers:
+      - name: operator
+        image: lab4-registry.corp.ailabs.tw/group-medical/harmonia/operator:v0.1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9080
+          name: steward
+        volumeMounts:
+        - name: operator-config
+          subPath: edge-config.yml
+          mountPath: /app/config.yml
+        #Shared repo
+        - name: manual-harmonia
+          subPath: edges/aspect-edge1/repos
+          mountPath: /repos
+
+      - name: application
+        image: xup6yj/aspect_fl
+        imagePullPolicy: Always
+        volumeMounts:
+        #Shared repo
+        - name: manual-harmonia
+          subPath: edges/aspect-edge1/repos
+          mountPath: /repos
+        # Appliction data
+        - name: manual-harmonia
+          subPath: edges/aspect-edge1/application
+          mountPath: /manual-harmonia/aspect
+        - name: application-config
+          subPath: train_config.yml
+          mountPath: /app/train_config.yml
+        resources:
+          limits:
+            gpu.ailabs.tw/geforce-rtx-2080-ti: 1
+      volumes:
+      - name: operator-config
+        configMap:
+          name: aspect-edge1-operator-config
+      - name: application-config
+        configMap:
+          name: aspect-edge1-application-config
+      - name: manual-harmonia
+        persistentVolumeClaim:
+          claimName: manual-harmonia
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: aspect-edge1
+spec:
+  selector:
+    app: aspect-edge1
+  ports:
+  - name: aspect-edge1
+    port: 9080
+    targetPort: 9080

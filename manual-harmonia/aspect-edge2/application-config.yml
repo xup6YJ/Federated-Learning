@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aspect-edge2-application-config
+data:
+  train_config.yml: |
+    Learning_rate: 0.0005
+    SWA_start_epoch: 175
+    aug_Rrange: 15
+    aug_Trange: 0.02
+    aug_hflip: False
+    aug_vflip: False
+    batch_per_SWA: 0
+    batch_per_update: 1
+    batch_size: 3
+    class_threshold: 0.5
+    cyclic_epochs: 1
+    cyclic_mult: 2
+    epoch: 250
+    epoch_per_SWA: 1
+    es_patience: 300
+    freeze_enc: False
+    half_precision: False
+    logdir: cpts
+    loss_beta: 0.999
+    lossfun: BinaryFocalLoss_2
+    lr_gamma: 0.977
+    lr_min: 1.0e-06
+    model_name: WBmodel2_toy_model
+    momentum: 0.9
+    no_SWA_scheduler: False
+    num_class: 2
+    num_test_aug: 1
+    optimizer: Adam
+    output_CAM: True
+    pre_align: False
+    restart: False
+    scheduler: ExponentialLR
+    seed: 0
+    skull_strip: False
+    swa_lr: 5.0e-05
+    swa_scheduler: SWALR
+    test_aug_agg: mean
+    train_data:  /manual-harmonia/aspect/train_data_test/train  
+    trained_model: /repos/gitea/aspect_lab3_global/merged.ckpt
+    trained_swa_model: null
+    use_SWA_model: False
+    use_pretrained: False
+    valid_data: /manual-harmonia/aspect/train_data_test/test
+    weight_decay: 5.0e-09
+    z_crop: False
+
+
+  data_config.yaml: |
+    parse_annotations:
+
+        json_path: /manual-harmonia/aspect/harmonia_labels/label.json
+        annotators: null
+        label_map_path: /manual-harmonia/aspect/label_map.csv
+        label_order: null
+        strict_label: True
+
+        dicom_path: /manual-harmonia/aspect/harmonia_labels
+        data_reader: ReadXray
+        modality: ["CR", "DX"]
+        strict_file: False
+
+        dataset_folder: /manual-harmonia/aspect/transformed_data
+        annotation_filename: "annotation_train.csv"
+        save_items: ["data", "label"]
+        save_extension: "nii.gz"
+
+  label_map.csv: |
+    category,label
+    normal,0
+    pneumonia,1
+    covid,2

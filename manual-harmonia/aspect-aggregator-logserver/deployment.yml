@@ -1,0 +1,181 @@
+# Aggregator
+apiVersion: batch/v1
+kind: 'Job'
+metadata:
+  name: aspect-aggregator
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      name: aspect-aggregator
+      labels:
+        ailabs.tw/group: medical
+        app: aspect-aggregator
+    spec:
+      tolerations:
+      - key: "ailabs.tw/cuda-11"
+        operator: "Exists"
+      priorityClassName: perpetual-batch
+
+    # initContainers
+      initContainers:
+      - name: "delete-before"
+        image: "busybox:1.28"
+        volumeMounts:
+        - name: manual-harmonia
+          subPath: aggregator/aspect/repos
+          mountPath: /repos
+        command: ['sh', '-c', 'rm -rf /repos/* && echo Files deleted']
+
+      #containers
+      containers:
+      # operator
+      - name: operator
+        image: lab4-registry.corp.ailabs.tw/group-medical/harmonia/operator
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9080
+          name: steward
+        volumeMounts:
+        - name: config
+          subPath: aggregator-config.yml
+          mountPath: /app/config.yml
+        - name: manual-harmonia
+          subPath: aggregator/aspect/repos
+          mountPath: /repos
+
+      # application
+      - name: application
+        image: lab4-registry.corp.ailabs.tw/group-medical/harmonia/tmi-aggregator
+        imagePullPolicy: Always
+        env:
+        - name: MODEL_FILENAME
+          value: "weights.ckpt"
+        volumeMounts:
+        - name: manual-harmonia
+          subPath: aggregator/aspect/repos
+          mountPath: /repos
+      restartPolicy: 'Never'
+
+      volumes:
+      - name: config
+        configMap:
+          name: aspect-aggregator-config
+      - name: manual-harmonia
+        persistentVolumeClaim:
+          claimName: manual-harmonia
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: aspect-aggregator
+spec:
+  selector:
+    app: aspect-aggregator
+  ports:
+  - name: aspect-aggregator
+    port: 9080
+    targetPort: 9080
+
+---
+# Logserver
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspect-logserver
+  labels:
+    app: aspect-logserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspect-logserver
+  template:
+    metadata:
+      labels:
+        app: aspect-logserver
+    spec:
+      priorityClassName: perpetual-batch
+    # initContainers
+      initContainers:
+      - name: "delete-before"
+        image: "busybox:1.28"
+        volumeMounts:
+        - name: manual-harmonia
+          subPath: logserver/aspect/tensorboard_data
+          mountPath: /tensorboard_data
+        command: ['sh', '-c', 'rm -rf /tensorboard_data/* && echo Files deleted']
+      containers:
+      # operator
+      - name: operator
+        image: lab4-registry.corp.ailabs.tw/group-medical/harmonia/logserver:alpha-v0.0.5
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9080
+          name: logserver
+        volumeMounts:
+        - name: config
+          subPath: logserver-config.yml
+          mountPath: /app/config.yml
+        - name: manual-harmonia
+          subPath: logserver/aspect/tensorboard_data
+          mountPath: /tensorboard_data
+      # tensorboard
+      - name: tensorboard
+        image: tensorflow/tensorflow:2.2.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 6006
+          name: tensorboard
+        volumeMounts:
+        - name: manual-harmonia
+          subPath: logserver/aspect/tensorboard_data
+          mountPath: /tensorboard_data
+        command: ["tensorboard"]
+        args: ["--logdir=/tensorboard_data", "--bind_all"]
+
+      volumes:
+      - name: config
+        configMap:
+          name: aspect-logserver-config
+      - name: manual-harmonia
+        persistentVolumeClaim:
+          claimName: manual-harmonia	      # 在同一個 namespace 下的 Volume
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: aspect-logserver
+spec:
+  selector:
+    app: aspect-logserver
+  ports:
+  - name: aspect-logserver
+    port: 9080
+    targetPort: 9080
+  - name: aspect-tensorboard
+    port: 6006
+    targetPort: 6006
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: aspect-logserver
+  namespace: group-medical
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"                  # 給 cert-manager 看的 annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"               # (optional) ssl redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"         # (optional) ssl redirect
+    nginx.ingress.kubernetes.io/proxy-body-size: 30m
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: logserver.corp.ailabs.tw
+    http:
+     paths:
+       - path: /harmonia-aspect(/|$)(.*)
+         backend:
+           serviceName: aspect-logserver
+           servicePort: 6006

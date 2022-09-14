@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {EDGE_NAME}-operator-config
+data:
+  edge-config.yml: |
+    type: edge
+    notification:
+      type: pull
+      pullPeriod: 30
+    logLevel: debug
+    registry:
+      URL: gitea.corp.ailabs.tw
+      protocol: https
+      username: {USERNAME}
+      userToken: {USER_TOKEN}
+    aggregatorModelRepoName: {GITEA_ADMIN_USERNAME}/{GLOBAL_REPO}
+    edgeModelRepoName: {GITEA_ADMIN_USERNAME}/{EDGE_REPO}
+    trainPlanRepoName: {GITEA_ADMIN_USERNAME}/{TRAIN_PLAN_REPO}
