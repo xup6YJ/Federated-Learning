@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: &name aspect123
+  namespace: user-yingjhi-lin
+spec:
+  template:
+    metadata:
+      labels:
+        ailabs.tw/group: medical
+        ailabs.tw/user: yingjhi.lin
+    spec:
+      containers:
+        - name: *name
+          image: 'xup6yj/aspect_fl_s2:0.6'
+          workingDir: /volume
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: frank
+              mountPath: /volume/frank
+
+          command:
+            - "/bin/sh"
+            - "-c"
+          args:
+            - sleep infinity
+          resources:
+            limits:
+              gpu.ailabs.tw/geforce-rtx-3090: 1  # geforce-rtx-3090, titan-rtx, tesla-p100-pcie-16gb, geforce-rtx-2080-ti
+      priorityClassName: perpetual-batch  # perpetual-batch, perpetual-share
+      tolerations:
+        - key: ailabs.tw/cuda-11
+          operator: Exists
+        - key: ailabs.tw/low-memory
+          operator: Exists
+      imagePullSecrets:
+        - name: taimedimg
+      restartPolicy: OnFailure
+      dnsConfig:
+        options:
+          - name: ndots
+            value: '1'
+      volumes:
+        - name: frank
+          persistentVolumeClaim:
+            claimName: frank
+
+        - name: shm
+          emptyDir:
+            medium: Memory
+  backoffLimit: 5000
